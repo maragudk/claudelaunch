@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	g "maragu.dev/gomponents"
@@ -49,15 +50,18 @@ func (s *Server) launch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := s.launchSession(name)
+	result, err := s.launchSession(name)
 	if err != nil {
 		s.Log.Error("Failed to launch session", "name", name, "error", err)
 		s.render(w, r, chtml.ErrorPage("failed to launch session"))
 		return
 	}
 
-	s.Log.Info("Launched session", "session", session)
-	s.render(w, r, chtml.SuccessPage(session))
+	s.Log.Info("Launched session", "session", result.Session, "url", result.URL)
+	s.render(w, r, chtml.SuccessPage(chtml.LaunchResult{
+		Session: result.Session,
+		URL:     result.URL,
+	}))
 }
 
 func (s *Server) render(w http.ResponseWriter, r *http.Request, n g.Node) {
@@ -66,23 +70,59 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, n g.Node) {
 	})(w, r)
 }
 
-func (s *Server) launchSession(name string) (string, error) {
+// LaunchResult holds the result of launching a session.
+type LaunchResult struct {
+	Session string
+	URL     string
+}
+
+func (s *Server) launchSession(name string) (LaunchResult, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("getting home dir: %w", err)
+		return LaunchResult{}, fmt.Errorf("getting home dir: %w", err)
 	}
 
 	dir := filepath.Join(home, "Developer", name)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", fmt.Errorf("creating directory: %w", err)
+		return LaunchResult{}, fmt.Errorf("creating directory: %w", err)
 	}
 
 	session := fmt.Sprintf("%v-%v", name, time.Now().Unix())
 
 	cmd := exec.Command("tmux", "new-session", "-d", "-s", session,
-		fmt.Sprintf("cd %v && claude --dangerously-skip-permissions", dir))
+		fmt.Sprintf("cd %v && claude --dangerously-skip-permissions --remote-control %q", dir, name))
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("tmux: %w: %s", err, output)
+		return LaunchResult{}, fmt.Errorf("tmux: %w: %s", err, output)
 	}
-	return session, nil
+
+	url, err := pollForSessionURL(session, 30*time.Second)
+	if err != nil {
+		s.Log.Warn("Could not capture session URL", "session", session, "error", err)
+	}
+
+	return LaunchResult{Session: session, URL: url}, nil
+}
+
+var sessionURLPattern = regexp.MustCompile(`https://claude\.ai/code/session_[a-zA-Z0-9]+`)
+
+func pollForSessionURL(session string, timeout time.Duration) (string, error) {
+	deadline := time.Now().Add(timeout)
+	interval := 500 * time.Millisecond
+
+	for time.Now().Before(deadline) {
+		cmd := exec.Command("tmux", "capture-pane", "-t", session, "-p")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			time.Sleep(interval)
+			continue
+		}
+
+		if url := sessionURLPattern.FindString(strings.TrimSpace(string(output))); url != "" {
+			return url, nil
+		}
+
+		time.Sleep(interval)
+	}
+
+	return "", fmt.Errorf("timed out waiting for session URL")
 }

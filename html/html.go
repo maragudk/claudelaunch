@@ -1,10 +1,18 @@
 package html
 
 import (
+	"strings"
+
 	. "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
 )
+
+// LaunchResult holds the info needed to render the success page.
+type LaunchResult struct {
+	Session string
+	URL     string
+}
 
 func page(title string, body ...Node) Node {
 	return HTML5(HTML5Props{
@@ -50,15 +58,28 @@ func IndexPage() Node {
 }
 
 // SuccessPage renders a success message after launching a session.
-func SuccessPage(name string) Node {
+func SuccessPage(result LaunchResult) Node {
 	return page("launched - claudelaunch",
 		H1(Class("text-2xl font-bold text-green-400 mb-4"), Text("Session launched")),
 		P(Class("text-gray-300 mb-2"), Text("Started tmux session: "),
-			Code(Class("bg-gray-800 px-2 py-1 rounded text-blue-400"), Text(name)),
+			Code(Class("bg-gray-800 px-2 py-1 rounded text-blue-400"), Text(result.Session)),
 		),
+		Iff(result.URL != "", func() Node {
+			desktopURL := strings.Replace(result.URL, "https://claude.ai/", "claude-cli://", 1)
+			return Div(Class("mt-4 mb-4 flex flex-col gap-2"),
+				A(Href(desktopURL),
+					Class("block w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md cursor-pointer transition-colors text-center"),
+					Text("Open in Desktop App"),
+				),
+				A(Href(result.URL), Target("_blank"),
+					Class("block w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-md cursor-pointer transition-colors text-center"),
+					Text("Open in Browser"),
+				),
+			)
+		}),
 		P(Class("text-gray-400 mb-6 text-sm"),
-			Text("Attach with: "),
-			Code(Class("bg-gray-800 px-2 py-1 rounded text-gray-300"), Textf("tmux attach -t %v", name)),
+			Text("Or attach locally: "),
+			Code(Class("bg-gray-800 px-2 py-1 rounded text-gray-300"), Textf("tmux attach -t %v", result.Session)),
 		),
 		A(Href("/"), Class("text-blue-400 hover:text-blue-300 underline"), Text("Launch another")),
 	)
