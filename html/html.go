@@ -1,8 +1,6 @@
 package html
 
 import (
-	"strings"
-
 	. "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/components"
 	. "maragu.dev/gomponents/html"
@@ -65,14 +63,9 @@ func SuccessPage(result LaunchResult) Node {
 			Code(Class("bg-gray-800 px-2 py-1 rounded text-blue-400"), Text(result.Session)),
 		),
 		Iff(result.URL != "", func() Node {
-			desktopURL := strings.Replace(result.URL, "https://claude.ai/", "claude-cli://", 1)
-			return Div(Class("mt-4 mb-4 flex flex-col gap-2"),
-				A(Href(desktopURL),
-					Class("block w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md cursor-pointer transition-colors text-center"),
-					Text("Open in Desktop App"),
-				),
+			return Div(Class("mt-4 mb-4"),
 				A(Href(result.URL), Target("_blank"),
-					Class("block w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-md cursor-pointer transition-colors text-center"),
+					Class("block w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md cursor-pointer transition-colors text-center"),
 					Text("Open in Browser"),
 				),
 			)
