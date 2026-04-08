@@ -231,3 +231,57 @@ The plist at `~/Library/LaunchAgents/dev.maragu.claudelaunch.plist` should be te
 ### Future work
 
 Consider switching to a LaunchDaemon (system-level) if the GUI domain constraint becomes a problem. Or just document the tmux approach for SSH-only setups.
+
+## Step 6: Remote session support and browser access
+
+### Prompt Context
+
+**Verbatim prompt:** I actually won't use this through tmux, but the Claude app and remote sessions. Is it possible to link to the session directly?
+**Interpretation:** The user wants to access launched sessions through claude.ai/code rather than tmux attach.
+**Inferred intent:** Make claudelaunch a web-based launcher that links directly to remote Claude Code sessions, usable from any device (including iPad).
+
+### What I did
+
+- Researched Claude Code's `--remote-control` flag and `claude remote-control` server mode
+- Added `--remote-control <name>` to the claude launch command in `/claudelaunch.go`
+- Implemented `pollForSessionURL` that captures the tmux pane output every 500ms for up to 30 seconds, looking for the `https://claude.ai/code/session_*` URL
+- Updated `/html/html.go` `SuccessPage` to accept a `LaunchResult` struct with both session name and URL
+- Added an "Open Session" button that links to the claude.ai/code URL
+- Briefly attempted a `claude-cli://` deep link for the desktop app, but it didn't work (possibly wrong URL format). Removed it in favor of browser-only link.
+
+### Why
+
+The primary use case shifted from "attach to tmux locally" to "open in browser from any device". The `--remote-control` flag makes sessions accessible at claude.ai/code, and polling the pane output is the only way to get the session URL programmatically.
+
+### What worked
+
+- `claude --remote-control "name"` works and prints the session URL to the terminal
+- Polling `tmux capture-pane -p` reliably captures the URL after a few seconds
+- The browser link works on iPad -- the actual use case the user wanted
+- The `claude remote-control` server mode exists for dedicated remote-only processes, but the `--remote-control` flag on interactive sessions is the better fit here
+
+### What didn't work
+
+- `claude-cli://` deep links: the Claude Code URL Handler app registers the `claude-cli:` scheme, but clicking the link in the browser prompted for permission and then nothing happened. Couldn't debug further from SSH since `open` commands fail with "Domain does not support specified action". Removed the desktop app button.
+
+### What I learned
+
+- Claude Code has two remote modes: `claude remote-control` (dedicated server, supports `--capacity`, `--spawn`) and `claude --remote-control` (interactive session also accessible remotely)
+- The `--remote-control-session-name-prefix` flag controls auto-generated session names, but you can pass a name directly: `--remote-control "My Session"`
+- There's no programmatic API to get the session URL -- it's only printed to the terminal
+- The Claude Code URL Handler app at `~/Applications/Claude Code URL Handler.app` is a wrapper around the claude binary that handles `claude-cli:` URLs, but the exact URL path format for session links is unclear
+- `tmux capture-pane -t <session> -p` is a reliable way to read pane contents from outside the session
+
+### What was tricky
+
+The polling approach has an inherent tradeoff: the POST request blocks for several seconds while waiting for claude to start and print the URL. With a 30-second timeout and 500ms interval, the worst case is a 30-second page load. In practice it takes 3-5 seconds.
+
+### What warrants review
+
+- The polling timeout (30 seconds) and interval (500ms) in `pollForSessionURL` in `/claudelaunch.go` -- these were chosen by feel, not measurement
+- The URL regex `https://claude\.ai/code/session_[a-zA-Z0-9]+` -- if the URL format ever changes, this breaks silently (returns no URL, falls back to tmux-only success page)
+
+### Future work
+
+- Could make the POST return immediately and poll via JavaScript on the success page, avoiding the blocking request
+- The `claude-cli://` deep link could be revisited when testing from a local machine with GUI access
