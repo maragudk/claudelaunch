@@ -2,6 +2,10 @@
 benchmark:
 	go test -bench . ./...
 
+.PHONY: build
+build:
+	go build -o claudelaunch ./cmd/app
+
 .PHONY: cover
 cover:
 	go tool cover -html cover.out
@@ -13,6 +17,10 @@ fmt:
 .PHONY: lint
 lint:
 	golangci-lint run
+
+.PHONY: run
+run:
+	go run ./cmd/app
 
 .PHONY: test
 test:
