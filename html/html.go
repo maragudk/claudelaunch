@@ -66,7 +66,7 @@ func SuccessPage(result LaunchResult) Node {
 			return Div(Class("mt-4 mb-4"),
 				A(Href(result.URL), Target("_blank"),
 					Class("block w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md cursor-pointer transition-colors text-center"),
-					Text("Open in Browser"),
+					Text("Open Session"),
 				),
 			)
 		}),
