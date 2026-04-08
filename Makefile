@@ -18,6 +18,11 @@ fmt:
 lint:
 	golangci-lint run
 
+.PHONY: restart
+restart: install
+	-tmux kill-session -t claudelaunch-server
+	tmux new-session -d -s claudelaunch-server ~/Developer/go/bin/claudelaunch
+
 .PHONY: run
 run:
 	go run ./cmd/claudelaunch
