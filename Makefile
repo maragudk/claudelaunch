@@ -2,9 +2,9 @@
 benchmark:
 	go test -bench . ./...
 
-.PHONY: build
-build:
-	go build -o claudelaunch ./cmd/app
+.PHONY: install
+install:
+	go install ./cmd/claudelaunch
 
 .PHONY: cover
 cover:
@@ -20,7 +20,7 @@ lint:
 
 .PHONY: run
 run:
-	go run ./cmd/app
+	go run ./cmd/claudelaunch
 
 .PHONY: test
 test:
