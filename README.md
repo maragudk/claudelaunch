@@ -1,5 +1,7 @@
 # claudelaunch
 
+<img src="logo.png" alt="Logo" width="300" align="right">
+
 [![CI](https://github.com/maragudk/claudelaunch/actions/workflows/ci.yml/badge.svg)](https://github.com/maragudk/claudelaunch/actions/workflows/ci.yml)
 
 Claude Code launcher -- starts persistent Claude Code sessions inside tmux, accessible remotely via claude.ai.
