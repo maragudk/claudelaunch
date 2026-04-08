@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	g "maragu.dev/gomponents"
@@ -18,9 +19,14 @@ import (
 	chtml "maragu.dev/claudelaunch/html"
 )
 
+const maxRecentNames = 20
+
 // Server serves HTTP requests that launch Claude Code sessions in tmux.
 type Server struct {
 	Log *slog.Logger
+
+	mu          sync.Mutex
+	recentNames []string
 }
 
 var validName = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
@@ -34,7 +40,34 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, chtml.IndexPage())
+	s.mu.Lock()
+	names := make([]string, len(s.recentNames))
+	copy(names, s.recentNames)
+	s.mu.Unlock()
+
+	s.render(w, r, chtml.IndexPage(names))
+}
+
+// AddRecentName records a name in the recent names list.
+func (s *Server) AddRecentName(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Remove duplicate if present.
+	for i, n := range s.recentNames {
+		if n == name {
+			s.recentNames = append(s.recentNames[:i], s.recentNames[i+1:]...)
+			break
+		}
+	}
+
+	// Prepend.
+	s.recentNames = append([]string{name}, s.recentNames...)
+
+	// Trim to max.
+	if len(s.recentNames) > maxRecentNames {
+		s.recentNames = s.recentNames[:maxRecentNames]
+	}
 }
 
 func (s *Server) launch(w http.ResponseWriter, r *http.Request) {
@@ -57,6 +90,7 @@ func (s *Server) launch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.AddRecentName(name)
 	s.Log.Info("Launched session", "session", result.Session, "url", result.URL)
 	s.render(w, r, chtml.SuccessPage(chtml.LaunchResult{
 		Session: result.Session,

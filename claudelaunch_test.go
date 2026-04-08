@@ -56,6 +56,30 @@ func TestServer_Handler(t *testing.T) {
 		is.Equal(t, http.StatusOK, res.Code)
 		is.True(t, strings.Contains(res.Body.String(), "alphanumeric"))
 	})
+
+	t.Run("shows recent names on the index page", func(t *testing.T) {
+		s := newTestServer()
+		s.AddRecentName("totally-real-session")
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		res := httptest.NewRecorder()
+		s.Handler().ServeHTTP(res, req)
+
+		is.Equal(t, http.StatusOK, res.Code)
+		is.True(t, strings.Contains(res.Body.String(), "totally-real-session"))
+		is.True(t, strings.Contains(res.Body.String(), "Recent sessions"))
+	})
+
+	t.Run("index page has no recent section when list is empty", func(t *testing.T) {
+		s := newTestServer()
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		res := httptest.NewRecorder()
+		s.Handler().ServeHTTP(res, req)
+
+		is.Equal(t, http.StatusOK, res.Code)
+		is.True(t, !strings.Contains(res.Body.String(), "Recent sessions"))
+	})
 }
 
 func newTestServer() *claudelaunch.Server {

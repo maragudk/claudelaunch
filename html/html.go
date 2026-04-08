@@ -29,8 +29,8 @@ func page(title string, body ...Node) Node {
 	})
 }
 
-// IndexPage renders the launcher form.
-func IndexPage() Node {
+// IndexPage renders the launcher form, with an optional list of recently used names.
+func IndexPage(recentNames []string) Node {
 	return page("claudelaunch",
 		H1(Class("text-2xl font-bold text-gray-100 mb-6"), Text("claudelaunch")),
 		P(Class("text-gray-400 mb-6"), Text("Launch a persistent Claude Code session inside tmux.")),
@@ -52,6 +52,22 @@ func IndexPage() Node {
 				Text("Launch"),
 			),
 		),
+		Iff(len(recentNames) > 0, func() Node {
+			items := make([]Node, len(recentNames))
+			for i, name := range recentNames {
+				items[i] = Li(
+					Button(Type("button"),
+						Class("w-full text-left px-3 py-2 text-gray-300 hover:bg-gray-800 rounded-md cursor-pointer transition-colors"),
+						Attr("onclick", "document.getElementById('name').value=this.textContent.trim();document.getElementById('name').focus()"),
+						Text(name),
+					),
+				)
+			}
+			return Div(Class("mt-6"),
+				H2(Class("text-sm font-medium text-gray-400 mb-2"), Text("Recent sessions")),
+				Ul(Class("space-y-1"), Group(items)),
+			)
+		}),
 	)
 }
 
