@@ -10,9 +10,9 @@ Made with sparkles by [maragu](https://www.maragu.dev/).
 
 > **Disclaimer:** This project is 100% vibe-coded. No humans were harmed in the making of this software, but no humans reviewed it either.
 
-![claudelaunch session flow](docs/infographic.png)
-
 ## How it works
+
+![claudelaunch session flow](docs/infographic.png)
 
 1. claudelaunch runs an HTTP server on port 6677
 2. Open the web UI, type a session name, and hit Launch
