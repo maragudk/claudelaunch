@@ -124,7 +124,7 @@ func (s *Server) launchSession(name string) (LaunchResult, error) {
 	session := fmt.Sprintf("%v-%v", name, time.Now().Unix())
 
 	cmd := exec.Command("tmux", "new-session", "-d", "-s", session,
-		fmt.Sprintf("cd %v && claude --dangerously-skip-permissions --remote-control %q", dir, name))
+		fmt.Sprintf("cd %v && claude --dangerously-skip-permissions --remote-control", dir))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return LaunchResult{}, fmt.Errorf("tmux: %w: %s", err, output)
 	}
